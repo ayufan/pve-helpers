@@ -1,0 +1,10 @@
+#!/bin/bash
+
+if [[ "$1" == "pre" ]]; then
+  /usr/lib/pve-helpers/suspend-all-vms.sh
+elif [[ "$1" == "post" ]]; then
+  /usr/lib/pve-helpers/resume-all-vms.sh
+else
+  echo "invalid: $@"
+  exit 1
+fi
