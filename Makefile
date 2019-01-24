@@ -2,34 +2,40 @@ export RELEASE ?= 1
 export RELEASE_NAME ?= $(shell cat VERSION)-$(RELEASE)
 export RELEASE_VERSION ?= $(RELEASE_NAME)-g$(shell git rev-parse --short HEAD)
 
+PACKAGE_FILE ?= pve-helpers-$(RELEASE_NAME)_all.deb
+TARGET_HOST ?= fill-me.home
+
 all: pve-helpers
 
 .PHONY: pve-helpers
-pve-helpers: pve-helpers-$(RELEASE_NAME)_all.deb
+pve-helpers: $(PACKAGE_FILE)
 
-pve-helpers-$(RELEASE_NAME)_all.deb:
-	fpm -s dir -t deb -n pve-helpers-$(RELEASE_NAME) -v $(RELEASE_NAME) \
-		-p $@ \
-		--deb-priority optional \
+$(PACKAGE_FILE):
+	fpm \
+		--input-type dir \
+		--output-type deb \
+		--name pve-helpers \
+		--version $(RELEASE_NAME) \
+		--package $@ \
+		--architecture all \
 		--category admin \
-		--force \
+		--url https://gitlab.com/ayufan/pve-helpers-build \
+		--description "Proxmox VE Helpers" \
+		--vendor "Kamil Trzciński" \
+		--maintainer "Kamil Trzciński <ayufan@ayufan.eu>" \
+		--license "MIT" \
+		--deb-priority optional \
 		--depends inotify-tools \
 		--depends qemu-server \
 		--depends expect \
 		--depends util-linux \
-		--depends parted \
-		--depends device-tree-compiler \
-		--depends linux-base \
 		--deb-compression bzip2 \
-		--deb-field "Provides: pve-helpers, pve-helpers" \
-		--deb-field "Replaces: pve-helpers, pve-helpers" \
-		--deb-field "Conflicts: pve-helpers, pve-helpers" \
-		--after-install scripts/postinst.deb \
-		--url https://gitlab.com/ayufan/pve-helpers-build \
-		--description "Proxmox VE Helpers" \
-		-m "Kamil Trzciński <ayufan@ayufan.eu>" \
-		--license "MIT" \
-		--vendor "Kamil Trzciński" \
-		-a all \
-		--deb-systemd root/lib/systemd/system/pve-qemu-hooks.service \
-		root/usr/=/usr/ \
+		--deb-systemd scripts/pve-qemu-hooks.service \
+		root/=/
+
+deploy: pve-helpers
+	scp $(PACKAGE_FILE) $(TARGET_HOST):
+	ssh $(TARGET_HOST) dpkg -i $(PACKAGE_FILE)
+
+clean:
+	rm -f $(PACKAGE_FILE)
