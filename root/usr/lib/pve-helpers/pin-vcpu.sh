@@ -2,16 +2,19 @@
 
 set -eo pipefail
 
+if [[ $# -ne 1 ]]; then
+	echo "usage: $0 <VMID>"
+	exit 1
+fi
+
 VMID="$1"
 
-if ! grep -q "/etc/pve/qemu-server/$VMID.conf" "CPUPIN"; then
-	echo "/etc/pve/qemu-server/$VMID.conf: does not have CPUPIN"
+if ! grep -q "CPUPIN" "/etc/pve/nodes/$(hostname)/qemu-server/$VMID.conf"; then
+	echo "/etc/pve/nodes/$(hostname)/qemu-server/$VMID.conf: does not have CPUPIN"
 	exit 1
 fi
 
 vm_cpu_tasks() {
-	sleep 5s
-
 	expect <<EOF | sed -n 's/^.* CPU .*thread_id=\(.*\)$/\1/p' | tr -d '\r' || true
 spawn qm monitor $VMID
 expect ">"
@@ -34,23 +37,36 @@ cores() {
 }
 
 echo Checking $VMID...
-VCPUS=($(vm_cpu_tasks))
-VCPU_COUNT="${#VCPUS[@]}"
+
+for i in $(seq 1 10); do
+	if [[ "$(qm status $VMID)" != "status: running" ]]; then
+		echo "* VM $VMID is not running"
+		exit 1
+	fi
+
+	VCPUS=($(vm_cpu_tasks))
+	VCPU_COUNT="${#VCPUS[@]}"
+
+	if [[ $VCPU_COUNT -gt 0 ]]; then
+		break
+	fi
+
+	echo "* No VCPUS for $VMID"
+	sleep 3s
+done
 
 if [[ $VCPU_COUNT -eq 0 ]]; then
-	echo "* No VCPUS for $VMID"
 	exit 1
 fi
 
 echo "* Detected ${#VCPUS[@]} assigned to VM$VMID..."
 
-for CPU_INDEX in "${!VCPUS[@]}"
-do
+for CPU_INDEX in "${!VCPUS[@]}"; do
 	CPU_TASK="${VCPUS[$CPU_INDEX]}"
-	if read CPU_INDEX
+	if read CPU_INDEX; then
 		echo "* Assigning $CPU_INDEX to $CPU_TASK..."
 		taskset -pc "$CPU_INDEX" "$CPU_TASK"
 	else
 		echo "* No CPU to assign to $CPU_TASK"
 	fi
-done < $(cores)
+done < <(cores)
