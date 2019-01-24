@@ -2,8 +2,6 @@
 
 set -eo pipefail
 
-sleep 3s
-
 VMID="$1"
 
 if ! grep -q "/etc/pve/qemu-server/$VMID.conf" "CPUPIN"; then
@@ -12,6 +10,8 @@ if ! grep -q "/etc/pve/qemu-server/$VMID.conf" "CPUPIN"; then
 fi
 
 vm_cpu_tasks() {
+	sleep 5s
+
 	expect <<EOF | sed -n 's/^.* CPU .*thread_id=\(.*\)$/\1/p' | tr -d '\r' || true
 spawn qm monitor $VMID
 expect ">"
