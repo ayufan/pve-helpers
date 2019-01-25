@@ -6,9 +6,10 @@ resume_vm() {
 	VMID="$1"
 
 	VMSTATUS=$(qm status "$VMID")
+	VMCONFIG=$(qm config "$VMID")
 
 	# We need to reset only when hostpci.*:
-	if qm config "$VMID" | grep -q ^hostpci; then
+	if grep -q ^hostpci <(echo "$VMCONFIG"); then
 		if [[ "$VMSTATUS" == "status: running" ]]; then
 			echo "$VMID: Resetting as it has 'hostpci*:' devices..."
 			qm reset "$VMID"

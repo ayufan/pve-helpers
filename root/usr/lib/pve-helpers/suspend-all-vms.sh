@@ -11,6 +11,12 @@ suspend_vm() {
 		return 0
 	fi
 
+	VMCONFIG=$(qm config "$VMID")
+	if ! grep -q "^agent: 1" <(echo "$VMCONFIG"); then
+		echo "$VMID: VM does not have Guest Agent enabled, unable to suspend."
+		return 0
+	fi
+
 	echo "$VMID: Suspending..."
 	qm suspend "$VMID"
 
