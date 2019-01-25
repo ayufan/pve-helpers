@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -x
-
 resume_vm() {
 	VMID="$1"
 

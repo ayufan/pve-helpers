@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -x
-
 suspend_vm() {
 	VMID="$1"
 
