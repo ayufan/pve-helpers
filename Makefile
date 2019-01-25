@@ -33,6 +33,9 @@ $(PACKAGE_FILE):
 		--deb-systemd scripts/pve-qemu-hooks.service \
 		root/=/
 
+install: pve-helpers
+	dpkg -i $(PACKAGE_FILE)
+
 deploy: pve-helpers
 	scp $(PACKAGE_FILE) $(TARGET_HOST):
 	ssh $(TARGET_HOST) dpkg -i $(PACKAGE_FILE)

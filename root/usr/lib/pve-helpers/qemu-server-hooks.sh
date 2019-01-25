@@ -5,8 +5,8 @@ watch=/var/run/qemu-server
 
 mkdir -p "$hooks" "$watch"
 
-pin_vcpu() {
-  /usr/lib/pve-helpers/pin-vcpu.sh "$@"
+pin_vcpus() {
+  /usr/sbin/pin-vcpus.sh "$@"
 }
 
 while read file; do
@@ -18,11 +18,11 @@ while read file; do
   fi
 
   if [[ -e "$watch/$file" ]]; then
-    echo "* $VMID is up"
+    echo "$VMID: Did start."
     [[ -f "$hooks/$VMID.up" ]] && "$hooks/$VMID.up"
-    pin_vcpu "$VMID" &
+    pin_vcpus "$VMID" &
   else
-    echo "* $VMID is down"
+    echo "$VMID: Did stop."
     [[ -f "$hooks/$VMID.down" ]] && "$hooks/$VMID.down"
   fi
 done < <(/usr/bin/inotifywait -mq -e create,delete --format "%f" "$watch")

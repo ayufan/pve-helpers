@@ -5,30 +5,37 @@ set -x
 resume_vm() {
 	VMID="$1"
 
-	if [[ "$(qm status $VMID)" == "status: running" ]]; then
-		# We need to reset only when hostpci.*:
-		if qm config $VMID | grep -q ^hostpci; then
+	VMSTATUS=$(qm status "$VMID")
+
+	# We need to reset only when hostpci.*:
+	if qm config "$VMID" | grep -q ^hostpci; then
+		if [[ "$VMSTATUS" == "status: running" ]]; then
+			echo "$VMID: Resetting as it has 'hostpci*:' devices..."
 			qm reset "$VMID"
 			return 1
 		fi
+	fi
 
+	if [[ "$VMSTATUS" != "status: suspended" ]]; then
+		echo "$VMID: Nothing to due, due to: $VMSTATUS."
 		return 0
 	fi
 
-	if [[ "$(qm status $VMID)" != "status: suspended" ]]; then
-		return 0
-	fi
-
+	echo "$VMID: Resuming..."
 	qm resume "$VMID"
 
-	for i in $(seq 1 10); do
-		if [[ "$(qm status $VMID)" == "status: running" ]]; then
+	for i in $(seq 1 30); do
+		VMSTATUS=$(qm status "$VMID")
+		if [[ "$VMSTATUS" == "status: running" ]]; then
+			echo "$VMID: Resumed."
 			return 0
 		fi
-		sleep 3s
+
+		echo "$VMID: Waiting for resume: $VMSTATUS..."
+		sleep 1s
 	done
 
-	echo "Failed to resume $VMID"
+	echo "$VMID: Failed to resume: $VMSTATUS."
 	qm reset "$VMID"
 	return 1
 }

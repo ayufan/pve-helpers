@@ -5,20 +5,27 @@ set -x
 suspend_vm() {
 	VMID="$1"
 
-	if [[ "$(qm status $VMID)" != "status: running" ]]; then
+	VMSTATUS=$(qm status "$VMID")
+	if [[ "$VMSTATUS" != "status: running" ]]; then
+		echo "$VMID: Nothing to due, due to: $VMSTATUS."
 		return 0
 	fi
 
+	echo "$VMID: Suspending..."
 	qm suspend "$VMID"
 
-	for i in $(seq 1 20); do
-		if [[ "$(qm status $VMID)" == "status: suspended" ]]; then
+	for i in $(seq 1 30); do
+		VMSTATUS=$(qm status "$VMID")
+		if [[ "$VMSTATUS" == "status: suspended" ]]; then
+			echo "$VMID: Suspended."
 			return 0
 		fi
-		sleep 3s
+
+		echo "$VMID: Waiting for suspend: $VMSTATUS..."
+		sleep 1s
 	done
 
-	echo "$VMID: Failed to suspend"
+	echo "$VMID: Failed to suspend: $VMSTATUS."
 	return 1
 }
 

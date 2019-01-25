@@ -3,14 +3,19 @@
 set -eo pipefail
 
 if [[ $# -ne 1 ]]; then
-	echo "usage: $0 <VMID>"
+	echo "Usage: $0 <VMID>"
 	exit 1
 fi
 
 VMID="$1"
 
-if ! grep -q "CPUPIN" "/etc/pve/nodes/$(hostname)/qemu-server/$VMID.conf"; then
-	echo "/etc/pve/nodes/$(hostname)/qemu-server/$VMID.conf: does not have CPUPIN"
+if ! VMCONFIG=$(qm config "$VMID"); then
+	echo "$VMID: Does not exist."
+	exit 1
+fi
+
+if ! grep -q CPUPIN <(echo "$VMCONFIG"); then
+	echo "$VMID: Does not have CPUPIN defined."
 	exit 1
 fi
 
@@ -23,12 +28,16 @@ expect ">"
 EOF
 }
 
+# this functions returns a list of CPU cores
+# in order as they have HT threads
+# mapping Intel cpus to Qemu emulated cpus
 cores() {
 	# tail -n+2: ignore header
-	# sort -n -k4: sort by core-index
+	# sort -n -k4: sort by core-index vs threads
 	# ignore core-0: assuming that it is assigned to host with isolcpus
 	while read CPU NODE SOCKET CORE REST; do
 		if [[ "$CORE" == "0" ]]; then
+			# We assume that $CORE is assigned to host (always)
 			continue
 		fi
 
@@ -36,11 +45,12 @@ cores() {
 	done < <(lscpu -e | tail -n+2 | sort -n -k4)
 }
 
-echo Checking $VMID...
+echo "$VMID: Checking..."
 
 for i in $(seq 1 10); do
-	if [[ "$(qm status $VMID)" != "status: running" ]]; then
-		echo "* VM $VMID is not running"
+	VMSTATUS=$(qm status $VMID)
+	if [[ "$VMSTATUS" != "status: running" ]]; then
+		echo "$VMID: VM is not running: $VMSTATUS"
 		exit 1
 	fi
 
@@ -59,14 +69,14 @@ if [[ $VCPU_COUNT -eq 0 ]]; then
 	exit 1
 fi
 
-echo "* Detected ${#VCPUS[@]} assigned to VM$VMID..."
+echo "$VMID: Detected VCPU ${#VCPUS[@]} threads..."
 
 for CPU_INDEX in "${!VCPUS[@]}"; do
 	CPU_TASK="${VCPUS[$CPU_INDEX]}"
 	if read CPU_INDEX; then
-		echo "* Assigning $CPU_INDEX to $CPU_TASK..."
+		echo "$VMID: Assigning $CPU_INDEX to $CPU_TASK..."
 		taskset -pc "$CPU_INDEX" "$CPU_TASK"
 	else
-		echo "* No CPU to assign to $CPU_TASK"
+		echo "$VMID: No CPU to assign to $CPU_TASK"
 	fi
 done < <(cores)
