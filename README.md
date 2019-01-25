@@ -48,7 +48,7 @@ pin-vcpus.sh VMID
 #### 1.1. Using `isolcpus`
 
 The above option should be used with conjuction to `isolcpus` of kernel.
-A way to disable CPU cores from being used by hypervisor,
+This is a way to disable CPU cores from being used by hypervisor,
 making it possible to assign cores exclusively to the VMs only.
 
 For doing that edit `/etc/default/grub` and add:
@@ -79,7 +79,7 @@ CPU NODE SOCKET CORE L1d:L1i:L2:L3 ONLINE MAXMHZ    MINMHZ
 11  0    0      5    5:5:5:0       yes    4600.0000 800.0000
 ```
 
-For Ryzen CPUs you will rather see different CORE0 to be assigned
+For Ryzen CPUs you will rather see CORE0 to be assigned
 to CPU0 and CPU1, thus your specification will look `2-11`.
 
 After editing configuration `update-grub` and reboot Proxmox VE.
