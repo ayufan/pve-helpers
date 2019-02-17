@@ -1,8 +1,9 @@
-export RELEASE ?= 1
+export RELEASE_START_SHA ?= $(shell git rev-list -1 HEAD VERSION)
+export RELEASE ?= $(shell git rev-list $(RELEASE_START_SHA).. --count)
 export RELEASE_NAME ?= $(shell cat VERSION)-$(RELEASE)
 export RELEASE_VERSION ?= $(RELEASE_NAME)-g$(shell git rev-parse --short HEAD)
 
-PACKAGE_FILE ?= pve-helpers-$(RELEASE_NAME)_all.deb
+PACKAGE_FILE ?= pve-helpers-$(RELEASE_VERSION)_all.deb
 TARGET_HOST ?= fill-me.home
 
 all: pve-helpers
@@ -15,7 +16,7 @@ $(PACKAGE_FILE):
 		--input-type dir \
 		--output-type deb \
 		--name pve-helpers \
-		--version $(RELEASE_NAME) \
+		--version $(RELEASE_VERSION) \
 		--package $@ \
 		--architecture all \
 		--category admin \
