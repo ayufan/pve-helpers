@@ -10,13 +10,13 @@ suspend_vm() {
 	fi
 
 	VMCONFIG=$(qm config "$VMID")
-	if ! qm guest cmd 206 ping; then
+	if ! qm guest cmd "$VMID" ping; then
 		echo "$VMID: VM does not have Guest Agent enabled, unable to suspend."
 		return 0
 	fi
 
 	echo "$VMID: Suspending..."
-	qm guest cmd 206 suspend-ram
+	qm guest cmd "$VMID" suspend-ram
 
 	for i in $(seq 1 30); do
 		VMSTATUS=$(qm status "$VMID")
