@@ -1,10 +1,10 @@
 #!/bin/bash
 
 resume_vm() {
-	VMID="$1"
+	local VMID="$1"
 
-	VMSTATUS=$(qm status "$VMID")
-	VMCONFIG=$(qm config "$VMID")
+	local VMSTATUS=$(qm status "$VMID")
+	local VMCONFIG=$(qm config "$VMID")
 
 	# We need to reset only when hostpci.*:
 	if grep -q ^hostpci <(echo "$VMCONFIG"); then
@@ -15,9 +15,16 @@ resume_vm() {
 		fi
 	fi
 
-	if [[ "$VMSTATUS" != "status: suspended" ]]; then
-		echo "$VMID: Nothing to due, due to: $VMSTATUS."
+	if [[ ! -e "/var/run/qemu-server/$VMID.suspended" ]]; then
+		echo "$VMID: Nothing to due, due to missing: $VMID.suspended."
 		return 0
+	fi
+
+	rm -f "/var/run/qemu-server/$VMID.suspended"
+
+	if [[ "$VMSTATUS" == "status: stopped" ]]; then
+		echo "$VMID: Starting (stopped)..."
+		qm start "$VMID"
 	fi
 
 	echo "$VMID: Resuming..."
