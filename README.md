@@ -86,7 +86,7 @@ After editing configuration `update-grub` and reboot Proxmox VE.
 
 ### 2. Suspend/resume
 
-There's a set of scripts that try to perform suspend of machines
+There's a set of scripts that try to perform shutdown of machines
 when Proxmox VE machine goes to sleep.
 
 First, you might be interested in doing `suspend` on power button.
@@ -98,13 +98,15 @@ HandlePowerKey=suspend
 
 Then `systemctl restart systemd-logind.service` or reboot Proxmox VE.
 
-After that every of your machines should suspend alongside with Proxmox VE
-suspend, thus be able to support suspend/resume on PCI passthrough devices,
+After that every of your machines should shutdown alongside with Proxmox VE
+suspend, thus be able to support restart on PCI passthrough devices,
 like GPU.
 
 **Ensure that each of your machines does support Qemu Guest Agent**.
 This function will not work if you don't have Qemu Guest Agent installed
 and running.
+
+**Ensure that all machines does have hibernation**.
 
 ### 3. Run hooks on machine start and stop
 
