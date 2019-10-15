@@ -1,0 +1,48 @@
+#!/bin/bash
+
+VMID="$1"
+VMPID="$(cat "/var/run/qemu-server/$VMID.pid")"
+
+exec_taskset() {
+  echo "Running taskset with $1 for $VMPID..."
+  taskset -a -p -c "$1" "$VMPID"
+  echo ""
+}
+
+exec_chrt() {
+  echo "Running chrt with $1:$2 for $VMPID..."
+  chrt -v "--$1" -a -p "$2" "$VMPID"
+  echo ""
+}
+
+exec_post_start() {
+  while read CMD ARG1 ARG2 REST; do
+    case "$CMD" in
+      "#taskset")
+        exec_taskset "$ARG1"
+        ;;
+
+      "#chrt")
+        exec_chrt "${ARG1:-fifo}" "${ARG2:-1}"
+        ;;
+    esac
+  done
+}
+
+case "$2" in
+  pre-start)
+    ;;
+
+  post-start)
+    sleep 1s
+    exec_post_start < "/etc/pve/qemu-server/$1.conf"
+    ;;
+
+  pre-stop)
+    ;;
+
+  post-stop)
+    ;;
+esac
+
+exit 0

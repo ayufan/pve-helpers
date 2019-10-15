@@ -1,0 +1,10 @@
+#!/bin/bash
+
+if [[ "$1" == "pre" ]]; then
+  /usr/bin/pvesh --nooutput create /nodes/localhost/stopall
+elif [[ "$1" == "post" ]]; then
+  /usr/bin/pvesh --nooutput create /nodes/localhost/startall
+else
+  echo "invalid: $@"
+  exit 1
+fi
