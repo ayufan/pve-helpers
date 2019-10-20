@@ -254,7 +254,7 @@ name: win10-vga
 net0: virtio=3E:41:0E:4D:3D:14,bridge=vmbr0
 numa: 1
 onboot: 1
-ostype: w2k8
+ostype: win10
 runningmachine: pc-q35-3.1
 scsi0: nvme-thin:vm-204-disk-2,discard=on,iothread=1,size=100G
 scsi1: ssd:vm-204-disk-0,backup=0,discard=on,iothread=1,replicate=0,size=921604M
