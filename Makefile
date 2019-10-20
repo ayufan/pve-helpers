@@ -31,7 +31,6 @@ $(PACKAGE_FILE):
 		--depends expect \
 		--depends util-linux \
 		--deb-compression bzip2 \
-		--deb-systemd scripts/pve-qemu-hooks.service \
 		root/=/
 
 install: pve-helpers
