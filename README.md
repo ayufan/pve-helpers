@@ -84,6 +84,10 @@ Configure VM description with:
 chrt fifo 1
 ```
 
+> Note:
+> It seems that if Hyper-V entitlements (they are enabled for `ostype: win10`) are enabled this is no longer needed.
+> I now have amazing performance without using `chrt`.
+
 #### 3. Using `isolcpus`
 
 The option of `#taskset` can be used with conjuction to `isolcpus` of kernel.
@@ -123,6 +127,8 @@ to CPU0 and CPU1, thus your specification will look `2-11`.
 
 After editing configuration `update-grub` and reboot Proxmox VE.
 
+> Note: I have amazing performance without using `isolcpus`.
+
 ### 4. Suspend/resume
 
 There's a set of scripts that try to perform restart of machines
@@ -145,20 +151,12 @@ like GPU.
 This function will not work if you don't have Qemu Guest Agent installed
 and running.
 
-### 5. Kernel config
-
-I do disable `intel_pstate=disable` and change `cpufreq` governor
-to `performance` to fix microstutter.
-
-This greatly helps to maintain consistent performance in every workload
-at the cost of increased power consumption.
-
-### 6. My setup
+### 5. My setup
 
 Here's a quick rundown of my environment that I currently use
 with above quirks.
 
-#### 6.1. Hardware
+#### 5.1. Hardware
 
 - i7-8700
 - 48GB DDR4
@@ -166,7 +164,7 @@ with above quirks.
 - GeForce GTX 970 used by Linux VM
 - GeForce RTX 2080 Super used by Windows VM
 
-#### 6.2. Kernel config
+#### 5.2. Kernel config
 
 ```text
 GRUB_CMDLINE_LINUX=""
@@ -181,7 +179,7 @@ GRUB_CMDLINE_LINUX="$GRUB_CMDLINE_LINUX net.ifnames=1 biosdevname=1 acpi=force i
 GRUB_CMDLINE_LINUX="$GRUB_CMDLINE_LINUX hugepagesz=1G hugepages=42"
 ```
 
-#### 6.3. Linux VM
+#### 5.3. Linux VM
 
 I use Linux for regular daily development work. It uses GTX 970 for driving display.
 I passthrough the dedicate USB3 controller and attach ALSA audio device to shared
@@ -195,7 +193,6 @@ My Proxmox VE config looks like this:
 ```text
 ## CPU PIN
 #taskset 1-5
-#chrt fifo 1
 agent: 1
 args: -audiodev id=alsa,driver=alsa,out.period-length=100000,out.frequency=48000,out.channels=2,out.try-poll=off,out.dev=default:CARD=PCH -soundhw hda
 balloon: 0
@@ -225,7 +222,7 @@ serial0: socket
 sockets: 1
 ```
 
-#### 6.4. Windows VM
+#### 5.4. Windows VM
 
 I use Windows for Gaming. It has dedicated RTX 2080 Super. I pass through
 Logitech USB dongle and Bluetooth USB controller to VM. I also attach ALSA
@@ -234,7 +231,6 @@ audio device to shared audio output from Linux and Windows VM.
 ```text
 ## CPU PIN
 #taskset 7-11
-#chrt fifo 1
 agent: 1
 args: -audiodev id=alsa,driver=alsa,out.period-length=100000,out.frequency=48000,out.channels=2,out.try-poll=off,out.dev=default:CARD=PCH -soundhw hda
 balloon: 0
@@ -265,7 +261,7 @@ usb0: host=0a5c:21ec
 usb1: host=046d:c52b
 ```
 
-#### 6.5. Switching between VMs
+#### 5.5. Switching between VMs
 
 To switch between VMs:
 
