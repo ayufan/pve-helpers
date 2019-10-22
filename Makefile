@@ -30,7 +30,7 @@ $(PACKAGE_FILE):
 		--depends qemu-server \
 		--depends expect \
 		--depends util-linux \
-		--deb-compression bzip2 \
+		--deb-compression gz \
 		root/=/
 
 install: pve-helpers

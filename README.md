@@ -11,6 +11,13 @@ This repository is a set of scripts to better handle some of the Proxmox functio
 Clone and compile the repository:
 
 ```bash
+# install dependencies
+sudo apt-get install -f ruby-dev
+sudo gem install fpm
+```
+
+```bash
+# compile pve-helpers
 git clone https://github.com/ayufan/pve-helpers
 cd pve-helpers
 sudo make install
