@@ -1,48 +1,93 @@
 #!/bin/bash
 
 VMID="$1"
-VMPID="$(cat "/var/run/qemu-server/$VMID.pid")"
+ACTION="$2"
+SLEPT=""
+
+vmpid() {
+  cat "/var/run/qemu-server/$VMID.pid"
+}
+
+if_action() {
+  if [[ "$ACTION" == "$1" ]]; then
+    shift
+    eval "$@"
+  fi
+}
+
+sleep_once() {
+  if [[ -z "$SLEPT" ]]; then
+    sleep 1s
+    SLEPT=1
+  fi
+}
+
+exec_pci_rescan() {
+  echo "Running PCI rescan for $VMID..."
+  echo 1 > /sys/bus/pci/rescan
+}
+
+exec_pci_unbind() {
+  echo "Running PCI unbind of '$1:$2.$3' for $VMID..."
+  echo 1 > "/sys/bus/pci/devices/0000:$1:$2.$3/remove"
+}
 
 exec_taskset() {
-  echo "Running taskset with $1 for $VMPID..."
-  taskset -a -p -c "$1" "$VMPID"
+  sleep_once
+
+  echo "Running taskset with $1 for $(vmpid)..."
+  taskset -a -p -c "$1" "$(vmpid)"
   echo ""
 }
 
 exec_chrt() {
-  echo "Running chrt with $1:$2 for $VMPID..."
-  chrt -v "--$1" -a -p "$2" "$VMPID"
+  sleep_once
+
+  echo "Running chrt with $1:$2 for $(vmpid)..."
+  chrt -v "--$1" -a -p "$2" "$(vmpid)"
   echo ""
 }
 
-exec_post_start() {
+exec_qm_conflict() {
+  echo "Conflicting with other VM$1, shutdown just in case..."
+  qm shutdown "$1"
+}
+
+exec_qm_ensure() {
+  echo "Other VM$1 is required, ensure that it is started..."
+  qm start "$1"
+}
+
+exec_cmds() {
   while read CMD ARG1 ARG2 REST; do
     case "$CMD" in
+      "#pci_rescan")
+        if_action pre-start exec_pci_rescan
+        ;;
+
       "#taskset")
-        exec_taskset "$ARG1"
+        if_action post-start exec_taskset "$ARG1"
         ;;
 
       "#chrt")
-        exec_chrt "${ARG1:-fifo}" "${ARG2:-1}"
+        if_action post-start exec_chrt "${ARG1:-fifo}" "${ARG2:-1}"
+        ;;
+
+      "#pci_unbind")
+        if_action post-stop exec_pci_unbind "$ARG1" "$ARG2" "$ARG3"
+        ;;
+
+      "#qm_conflict")
+        if_action pre-start exec_qm_conflict "$ARG1"
+        ;;
+
+      "#qm_ensure")
+        if_action pre-start exec_qm_conflict "$ARG1"
         ;;
     esac
   done
 }
 
-case "$2" in
-  pre-start)
-    ;;
-
-  post-start)
-    sleep 1s
-    exec_post_start < "/etc/pve/qemu-server/$1.conf"
-    ;;
-
-  pre-stop)
-    ;;
-
-  post-stop)
-    ;;
-esac
+exec_cmds < "/etc/pve/qemu-server/$1.conf"
 
 exit 0

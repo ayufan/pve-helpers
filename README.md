@@ -74,7 +74,7 @@ VM 2:
 taskset 7-11
 ```
 
-### 2.2. `chrt`
+### 2.2. `chrt` (likely not needed)
 
 Running virtualized environment always results in quite random latency
 due to amount of other work being done. This is also, because Linux
@@ -94,6 +94,68 @@ chrt fifo 1
 > Note:
 > It seems that if Hyper-V entitlements (they are enabled for `ostype: win10`) are enabled this is no longer needed.
 > I now have amazing performance without using `chrt`.
+
+### 2.3. `pci_unbind` and `pci_rescan`
+
+At least for AMD Radeon there's an ongoing problem with Reset bug when running
+using VGA passthrough.
+
+There are multiple approaches to handle Radeon graphics cards. I did find that
+to make it stable:
+
+1. VGA bios needs to be exported, put in `/usr/share/kvm` and passed as `romfile` of `hostpci*`,
+2. PCIE unbind/rescan needs to happen.
+
+Exporting bios should happen ideally when running "natively", so with graphics card available,
+ideally on Windows, with `GPU-Z`. Once bios is exported, you should ensure that it
+contains UEFI section: https://pve.proxmox.com/wiki/Pci_passthrough#How_to_known_if_card_is_UEFI_.28ovmf.29_compatible.
+Sometimes the bios can be found on https://www.techpowerup.com/vgabios/.
+Ensure that you find the exact one for you `vid:pid` of your graphics card.
+
+This is how my config looks like once a bios is put in a correct place:
+
+```yaml
+cat /etc/pve/qemu-server/204.conf
+
+## Fix VGA
+#pci_rescan
+#pci_unbind 02 00 0
+#pci_unbind 02 00 1
+...
+hookscript: local:snippets/exec-cmds
+...
+hostpci0: 02:00,pcie=1,romfile=215895.rom,x-vga=1
+...
+machine: q35
+...
+```
+
+The comment defines a commands to execute to unbind and rebind graphics card VM.
+
+In cases where there are bugs in getting VM up, the `suspend/resume` cycle of Proxmox
+helps: `systemctl suspend`.
+
+### 2.4. `qm_conflict` and `qm_ensure`
+
+Sometimes some VMs are conflicting with each other due to dependency on the same resources,
+like disks, or VGA.
+
+There are helper commands to shutdown (the `qm_conflict`) or start (the `qm_ensure`)
+when main machine is being started.
+
+```yaml
+cat /etc/pve/qemu-server/204.conf
+
+# qm_shutdown 204
+# qm_ensure 207
+...
+```
+
+This first `qm_shutdown` will shuttdown VM with VMID 204 before starting the current one,
+and it will also start VMID 207, that might be a sibiling VM.
+
+I use the `qm_shutdown` or `qm_ensure` to run Linux VM sometimes with VGA passthrough,
+sometimes as a sibiling VM without graphics cards passed, but running in a console mode.
 
 #### 3. Using `isolcpus`
 
