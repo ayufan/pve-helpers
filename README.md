@@ -40,7 +40,7 @@ qm set 204 --hookscript=local:snippets/exec-cmds
 
 Edit VM description and add a new line if one or both these two commands.
 
-### 2.1. `taskset`
+### 2.1. `cpu_taskset`
 
 Check the `isolcpus`, but in general for the best performance
 you want to assign VM to physical cores, not a mix of physical
@@ -57,7 +57,7 @@ Then, you can assign the 5 cores (with CPU pinning, but not pinning specific
 threads) to VM:
 
 ```text
-taskset 7-11
+cpu_taskset 7-11
 ```
 
 This does assign to VM second thread of physical cores 1-6. We deliberatly
@@ -68,13 +68,13 @@ second on another thread, like this:
 
 ```text
 VM 1:
-taskset 1-5
+cpu_taskset 1-5
 
 VM 2:
-taskset 7-11
+cpu_taskset 7-11
 ```
 
-### 2.2. `chrt` (likely not needed)
+### 2.2. `cpu_chrt` (likely not needed)
 
 Running virtualized environment always results in quite random latency
 due to amount of other work being done. This is also, because Linux
@@ -88,12 +88,12 @@ but this is likely acceptable for Gaming / daily use of passthrough VMs.
 Configure VM description with:
 
 ```text
-chrt fifo 1
+cpu_chrt fifo 1
 ```
 
 > Note:
 > It seems that if Hyper-V entitlements (they are enabled for `ostype: win10`) are enabled this is no longer needed.
-> I now have amazing performance without using `chrt`.
+> I now have amazing performance without using `cpu_chrt`.
 
 ### 2.3. `pci_unbind` and `pci_rescan`
 
@@ -135,31 +135,33 @@ The comment defines a commands to execute to unbind and rebind graphics card VM.
 In cases where there are bugs in getting VM up, the `suspend/resume` cycle of Proxmox
 helps: `systemctl suspend`.
 
-### 2.4. `qm_conflict` and `qm_ensure`
+### 2.4. `qm_conflict` and `qm_depends`
 
 Sometimes some VMs are conflicting with each other due to dependency on the same resources,
 like disks, or VGA.
 
-There are helper commands to shutdown (the `qm_conflict`) or start (the `qm_ensure`)
+There are helper commands to shutdown (the `qm_conflict`) or start (the `qm_depends`)
 when main machine is being started.
 
 ```yaml
 cat /etc/pve/qemu-server/204.conf
 
-# qm_shutdown 204
-# qm_ensure 207
+# qm_conflict 204
+# qm_depends 207
 ...
 ```
 
-This first `qm_shutdown` will shuttdown VM with VMID 204 before starting the current one,
+This first `qm_conflict` will shuttdown VM with VMID 204 before starting the current one,
 and it will also start VMID 207, that might be a sibiling VM.
 
-I use the `qm_shutdown` or `qm_ensure` to run Linux VM sometimes with VGA passthrough,
+I use the `qm_conflict` or `qm_depends` to run Linux VM sometimes with VGA passthrough,
 sometimes as a sibiling VM without graphics cards passed, but running in a console mode.
+
+Be careful if you use `pci_unbind` and `pci_rebind`, they should be after the `qm_*` commands.
 
 #### 3. Using `isolcpus`
 
-The option of `#taskset` can be used with conjuction to `isolcpus` of kernel.
+The option of `#cpu_taskset` can be used with conjuction to `isolcpus` of kernel.
 This is a way to disable CPU cores from being used by hypervisor,
 making it possible to assign cores exclusively to the VMs only.
 
@@ -241,7 +243,7 @@ GRUB_CMDLINE_LINUX="$GRUB_CMDLINE_LINUX pci_stub.ids=10de:1e81,10de:10f8,10de:1a
 GRUB_CMDLINE_LINUX="$GRUB_CMDLINE_LINUX intel_iommu=on kvm_intel.ept=Y kvm_intel.nested=Y i915.enable_hd_vgaarb=1 pcie_acs_override=downstream vfio-pci.disable_idle_d3=1"
 GRUB_CMDLINE_LINUX="$GRUB_CMDLINE_LINUX cgroup_enable=memory swapaccount=1"
 GRUB_CMDLINE_LINUX="$GRUB_CMDLINE_LINUX pcie_aspm=force pcie_aspm.policy=powersave modprobe.blacklist=nouveau,amdgpu"
-# it seems that isolcpus does not make a lot of difference when you use `chrt`, `taskset` and `intel_pstate=disable`
+# it seems that isolcpus does not make a lot of difference when you use `cpu_chrt`, `cpu_taskset` and `intel_pstate=disable`
 #GRUB_CMDLINE_LINUX="$GRUB_CMDLINE_LINUX isolcpus=1-5,7-11 nohz_full=1-5,7-11 rcu_nocbs=1-5,7-11"
 GRUB_CMDLINE_LINUX="$GRUB_CMDLINE_LINUX intel_pstate=disable"
 GRUB_CMDLINE_LINUX="$GRUB_CMDLINE_LINUX net.ifnames=1 biosdevname=1 acpi=force i915.alpha_support=1 i915.enable_gvt=1"
@@ -261,7 +263,7 @@ My Proxmox VE config looks like this:
 
 ```text
 ## CPU PIN
-#taskset 1-5
+#cpu_taskset 1-5
 agent: 1
 args: -audiodev id=alsa,driver=alsa,out.period-length=100000,out.frequency=48000,out.channels=2,out.try-poll=off,out.dev=default:CARD=PCH -soundhw hda
 balloon: 0
@@ -299,7 +301,7 @@ audio device to shared audio output from Linux and Windows VM.
 
 ```text
 ## CPU PIN
-#taskset 7-11
+#cpu_taskset 7-11
 agent: 1
 args: -audiodev id=alsa,driver=alsa,out.period-length=100000,out.frequency=48000,out.channels=2,out.try-poll=off,out.dev=default:CARD=PCH -soundhw hda
 balloon: 0

@@ -32,7 +32,7 @@ exec_pci_unbind() {
   echo 1 > "/sys/bus/pci/devices/0000:$1:$2.$3/remove"
 }
 
-exec_taskset() {
+exec_cpu_taskset() {
   sleep_once
 
   echo "Running taskset with $1 for $(vmpid)..."
@@ -40,7 +40,7 @@ exec_taskset() {
   echo ""
 }
 
-exec_chrt() {
+exec_cpu_chrt() {
   sleep_once
 
   echo "Running chrt with $1:$2 for $(vmpid)..."
@@ -53,8 +53,8 @@ exec_qm_conflict() {
   qm shutdown "$1"
 }
 
-exec_qm_ensure() {
-  echo "Other VM$1 is required, ensure that it is started..."
+exec_qm_depends() {
+  echo "VM$1 is required, ensure that it is started..."
   qm start "$1"
 }
 
@@ -65,12 +65,16 @@ exec_cmds() {
         if_action pre-start exec_pci_rescan
         ;;
 
-      "#taskset")
-        if_action post-start exec_taskset "$ARG1"
+      "#cpu_taskset")
+        if_action post-start exec_cpu_taskset "$ARG1"
         ;;
 
-      "#chrt")
-        if_action post-start exec_chrt "${ARG1:-fifo}" "${ARG2:-1}"
+      "#cpu_chrt")
+        if_action post-start exec_cpu_chrt "${ARG1:-fifo}" "${ARG2:-1}"
+        ;;
+
+      "#qm_depends")
+        if_action post-start exec_qm_depends "$ARG1"
         ;;
 
       "#pci_unbind")
@@ -78,10 +82,6 @@ exec_cmds() {
         ;;
 
       "#qm_conflict")
-        if_action pre-start exec_qm_conflict "$ARG1"
-        ;;
-
-      "#qm_ensure")
         if_action pre-start exec_qm_conflict "$ARG1"
         ;;
     esac
