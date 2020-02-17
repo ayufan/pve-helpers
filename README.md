@@ -237,6 +237,7 @@ with above quirks.
 - Audio is being output by both VMs to the shared speakers that are connected to Motherboard audio card
 - Each VM has it's own dedicated USB controller
 - Each VM has a dedicated amount of memory using 1G hugepages
+- Each VM does not use SMT, rather it is assigned to the thread 0 (Linux) or thread 1 (Windows) of each CPU, having only 5 vCPUs available to VM
 
 #### 5.2. Kernel config
 
