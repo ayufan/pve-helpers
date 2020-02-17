@@ -232,8 +232,11 @@ with above quirks.
 - i7-8700
 - 48GB DDR4
 - Intel iGPU used by Proxmox VE
-- GeForce GTX 970 used by Linux VM
+- AMD RX560 2GB used by Linux VM
 - GeForce RTX 2080 Super used by Windows VM
+- Audio is being output by both VMs to the shared speakers that are connected to Motherboard audio card
+- Each VM has it's own dedicated USB controller
+- Each VM has a dedicated amount of memory using 1G hugepages
 
 #### 5.2. Kernel config
 
@@ -252,20 +255,24 @@ GRUB_CMDLINE_LINUX="$GRUB_CMDLINE_LINUX hugepagesz=1G hugepages=42"
 
 #### 5.3. Linux VM
 
-I use Linux for regular daily development work. It uses GTX 970 for driving display.
-I passthrough the dedicate USB3 controller and attach ALSA audio device to shared
-audio output from Linux and Windows VM.
-
-I also tried to use AMD RX560, but due to bugs related to reset and problems with
-Linux stability I switched back to GTX 970.
+I use Linux for regular daily development work.
 
 My Proxmox VE config looks like this:
 
 ```text
 ## CPU PIN
-#cpu_taskset 1-5
+#cpu_taskset 0-5
+#
+## Fix VGA
+#pci_rescan
+#pci_unbind 02 00 0
+#pci_unbind 02 00 1
+#
+## Conflict (207 shares disks, 208 shares VGA)
+#qm_conflict 207
+#qm_conflict 208
 agent: 1
-args: -audiodev id=alsa,driver=alsa,out.period-length=100000,out.frequency=48000,out.channels=2,out.try-poll=off,out.dev=default:CARD=PCH -soundhw hda
+args: -audiodev id=alsa,driver=alsa,out.period-length=100000,out.frequency=48000,out.channels=2,out.try-poll=off,out.dev=swapped -soundhw hda
 balloon: 0
 bios: ovmf
 boot: dcn
@@ -273,11 +280,11 @@ bootdisk: scsi0
 cores: 5
 cpu: host
 hookscript: local:snippets/exec-cmds
-hostpci0: 02:00,pcie=1,x-vga=1
-hostpci1: 06:00,pcie=1
+hostpci0: 02:00,romfile=215895.rom,x-vga=1
+hostpci1: 04:00
+hostpci2: 00:14.0
 hugepages: 1024
 ide2: none,media=cdrom
-machine: q35
 memory: 32768
 name: ubuntu19-vga
 net0: virtio=32:13:40:C7:31:4C,bridge=vmbr0
@@ -285,51 +292,50 @@ numa: 1
 onboot: 1
 ostype: l26
 scsi0: nvme-thin:vm-206-disk-1,discard=on,iothread=1,size=200G,ssd=1
-scsi1: ssd:vm-206-disk-0,discard=on,iothread=1,size=600G,ssd=1
-scsi2: tank:vm-206-disk-0,backup=0,iothread=1,replicate=0,size=2500G,ssd=1
-scsi3: ssd:vm-206-disk-1,backup=0,discard=on,iothread=1,replicate=0,size=300G,ssd=1
+scsi1: ssd:vm-206-disk-0,discard=on,iothread=1,size=100G,ssd=1
+scsi10: ssd:vm-206-disk-1,iothread=1,replicate=0,size=32G,ssd=1
 scsihw: virtio-scsi-pci
 serial0: socket
 sockets: 1
+usb0: host=1050:0406
+vga: none
 ```
 
 #### 5.4. Windows VM
 
-I use Windows for Gaming. It has dedicated RTX 2080 Super. I pass through
-Logitech USB dongle and Bluetooth USB controller to VM. I also attach ALSA
-audio device to shared audio output from Linux and Windows VM.
+I use Windows for Gaming. It has dedicated RTX 2080 Super.
 
 ```text
 ## CPU PIN
-#cpu_taskset 7-11
+#cpu_taskset 6-11
 agent: 1
-args: -audiodev id=alsa,driver=alsa,out.period-length=100000,out.frequency=48000,out.channels=2,out.try-poll=off,out.dev=default:CARD=PCH -soundhw hda
+args: -audiodev id=alsa,driver=alsa,out.period-length=100000,out.frequency=48000,out.channels=2,out.try-poll=off,out.dev=swapped -soundhw hda
 balloon: 0
 bios: ovmf
 boot: dc
 bootdisk: scsi0
-cores: 4
+cores: 5
 cpu: host
 cpuunits: 10000
-efidisk0: nvme-thin:vm-204-disk-1,size=128K
+efidisk0: nvme-thin:vm-204-disk-1,size=4M
 hookscript: local:snippets/exec-cmds
-hostpci0: 01:00,pcie=1,x-vga=1
+hostpci0: 01:00,pcie=1,x-vga=1,romfile=Gigabyte.RTX2080Super.8192.190820.rom
 hugepages: 1024
+ide2: none,media=cdrom
 machine: pc-q35-3.1
 memory: 10240
 name: win10-vga
-net0: virtio=3E:41:0E:4D:3D:14,bridge=vmbr0
+net0: e1000=3E:41:0E:4D:3D:14,bridge=vmbr0
 numa: 1
 onboot: 1
 ostype: win10
 runningmachine: pc-q35-3.1
-scsi0: nvme-thin:vm-204-disk-2,discard=on,iothread=1,size=100G
+scsi0: ssd:vm-204-disk-2,discard=on,iothread=1,size=64G,ssd=1
 scsi1: ssd:vm-204-disk-0,backup=0,discard=on,iothread=1,replicate=0,size=921604M
-scsi3: nvme-thin:vm-204-disk-0,backup=0,discard=on,iothread=1,replicate=0,size=50G
-scsihw: virtio-scsi-single
+scsi3: nvme-thin:vm-204-disk-0,backup=0,discard=on,iothread=1,replicate=0,size=100G
+scsihw: virtio-scsi-pci
 sockets: 1
-usb0: host=0a5c:21ec
-usb1: host=046d:c52b
+vga: none
 ```
 
 #### 5.5. Switching between VMs
@@ -342,12 +348,11 @@ To switch between VMs:
 1. I use Barrier (previously Synergy) for most of time.
 1. In other cases I have Logitech multi-device keyboard and mouse,
    so I switch it on keyboard.
-1. I also have a handy shortcut configured on keyboard
-   to switch monitor input via DDC and configure Barrier
-   to lock it to one of the screens.
+1. I also have a physical switch that I use
+   to change lighting and monitor inputs.
 1. I have the monitor with PBP and PIP, so I can watch how Windows
    is updating while doing development work on Linux.
 
 ## Author, License
 
-Kamil Trzciński, 2019, MIT
+Kamil Trzciński, 2019-2020, MIT
