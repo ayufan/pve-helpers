@@ -39,7 +39,7 @@ exec_assign_interrupts() {
   grep $1 /proc/interrupts | cut -d ":" -f 1 | while read -r i; do
         echo $i
         MASK=$2
-        echo $MASK > /proc/irq/$i/smp_affinity
+        echo $MASK > /proc/irq/$i/smp_affinity_list
   done
 }
 
