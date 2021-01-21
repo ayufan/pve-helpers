@@ -150,7 +150,7 @@ cat /etc/pve/qemu-server/204.conf
 # qm_depends 207
 ...
 ```
-### 2.5. `qm_conflict` and `qm_depends`
+
 This first `qm_conflict` will shuttdown VM with VMID 204 before starting the current one,
 and it will also start VMID 207, that might be a sibiling VM.
 
