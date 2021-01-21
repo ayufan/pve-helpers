@@ -27,6 +27,22 @@ exec_pci_rescan() {
   echo 1 > /sys/bus/pci/rescan
 }
 
+exec_set_haltpoll() {
+  echo "Setting haltpoll for $VMID..."
+  echo $1 > /sys/module/kvm/parameters/halt_poll_ns
+}
+
+exec_assign_interrupts() {
+  echo "Wating 30 seconds for all vfio-gpu interrupts to show up..."
+  sleep 30s
+  echo "Moving $1 interrupts to $2 cpu cores $VMID..."
+  grep $1 /proc/interrupts | cut -d ":" -f 1 | while read -r i; do
+        echo $i
+        MASK=$2
+        echo $MASK > /proc/irq/$i/smp_affinity_list
+  done
+}
+
 exec_pci_unbind() {
   echo "Running PCI unbind of '$1:$2.$3' for $VMID..."
   echo 1 > "/sys/bus/pci/devices/0000:$1:$2.$3/remove"
@@ -67,6 +83,14 @@ exec_cmds() {
 
       "#cpu_taskset")
         if_action post-start exec_cpu_taskset "$ARG1"
+        ;;
+
+      "#set_halt_poll")
+        if_action post-start exec_set_haltpoll "$ARG1"
+        ;;
+
+      "#assign_interrupts")
+        if_action post-start exec_assign_interrupts "$ARG1" "$ARG2"
         ;;
 
       "#cpu_chrt")
