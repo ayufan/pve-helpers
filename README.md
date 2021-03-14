@@ -12,7 +12,7 @@ Clone and compile the repository:
 
 ```bash
 # install dependencies
-sudo apt-get install -f ruby-dev
+sudo apt-get install -f ruby ruby-dev rubygems build-essential
 sudo gem install fpm
 ```
 
@@ -95,7 +95,20 @@ cpu_chrt fifo 1
 > It seems that if Hyper-V entitlements (they are enabled for `ostype: win10`) are enabled this is no longer needed.
 > I now have amazing performance without using `cpu_chrt`.
 
-### 2.3. `pci_unbind` and `pci_rescan`
+### 2.3. use `vendor-reset` for fixing AMD Radeon reset bug
+
+Instead of `pci_unbind` and `pci_rescan` install DKMS module from https://github.com/gnif/vendor-reset:
+
+```bash
+apt install dkms
+git clone https://github.com/gnif/vendor-reset.git /usr/src/vendor-reset-0.1.1
+dkms build vendor-reset/0.1.1
+dkms install vendor-reset/0.1.1
+echo vendor-reset >> /etc/modules
+modprobe vendor-reset
+```
+
+### 2.4. `pci_unbind` and `pci_rescan` **no longer needed, outdated**
 
 At least for AMD Radeon there's an ongoing problem with Reset bug when running
 using VGA passthrough.
@@ -135,7 +148,7 @@ The comment defines a commands to execute to unbind and rebind graphics card VM.
 In cases where there are bugs in getting VM up, the `suspend/resume` cycle of Proxmox
 helps: `systemctl suspend`.
 
-### 2.4. `qm_conflict` and `qm_depends`
+### 2.5. `qm_conflict` and `qm_depends`
 
 Sometimes some VMs are conflicting with each other due to dependency on the same resources,
 like disks, or VGA.
@@ -159,7 +172,7 @@ sometimes as a sibiling VM without graphics cards passed, but running in a conso
 
 Be careful if you use `pci_unbind` and `pci_rebind`, they should be after the `qm_*` commands.
 
-### 2.5. `set_halt_poll`
+### 2.6. `set_halt_poll`
 
 This setting changes the value of the kvm parameter `halt_poll_ns` in `/sys/module/kvm/parameters/halt_poll_ns`
 Different configurations benefit from different settings. Default value is `20000`. In theory, a larger value would be beneficial for the performance/latency of a VM. 
@@ -174,7 +187,7 @@ cat /etc/pve/qemu-server/110.conf
 ...
 ```
 
-### 2.6. `assign_interrupts`
+### 2.7. `assign_interrupts`
 
 `assign_interrupts [interrupt name] [cpu cores]`
 
@@ -304,11 +317,6 @@ My Proxmox VE config looks like this:
 ```text
 ## CPU PIN
 #cpu_taskset 0-5
-#
-## Fix VGA
-#pci_rescan
-#pci_unbind 02 00 0
-#pci_unbind 02 00 1
 #
 ## Conflict (207 shares disks, 208 shares VGA)
 #qm_conflict 207
