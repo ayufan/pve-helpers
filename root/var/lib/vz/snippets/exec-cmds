@@ -38,8 +38,10 @@ exec_assign_interrupts() {
   MASK="$1"
   shift
   for interrupt; do
+    interrupt=$(printf '%b' "${interrupt//%/\\x}")
     echo "Moving $interrupt interrupts to $MASK cpu cores $VMID..."
     grep $interrupt /proc/interrupts | cut -d ":" -f 1 | while read -r i; do
+      echo "- IRQ: $(grep "^\s*$i:" /proc/interrupts)"
       echo $MASK > /proc/irq/$i/smp_affinity_list
     done
   done
