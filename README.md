@@ -189,7 +189,7 @@ cat /etc/pve/qemu-server/110.conf
 
 ### 2.7. `assign_interrupts`
 
-`assign_interrupts [interrupt name] [cpu cores]`
+`assign_interrupts [cpu cores] [interrupt name] [interrupt name...]`
 
 This setting aims to simplify the process of assigning interrupts to the correct cpu cores in order to get the best performance
 while doing a gpu/usb controller/audio controller passthrough. The goal is to have the same cores assigned to the VM using `cpu_taskset`, 
@@ -205,7 +205,9 @@ cat /etc/pve/qemu-server/110.conf
 ##CPU pinning
 #cpu_taskset 4,12,5,13,6,14,7,15,2,10,3,11 
 ##Assigning vfio interrupts to VM cores
-#assign_interrupts vfio 4,12,5,13,6,14,7,15,2,10,3,11 
+#assign_interrupts 4,12,5,13,6,14,7,15,2,10,3,11 vfio
+##Assigning vfio interrupts to VM cores (a specific vfio device)
+#assign_interrupts 4,12,5,13,6,14,7,15,2,10,3,11 0000:01:00
 ...
 ```
 

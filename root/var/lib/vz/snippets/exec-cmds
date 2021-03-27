@@ -35,11 +35,13 @@ exec_set_haltpoll() {
 exec_assign_interrupts() {
   echo "Wating 30 seconds for all vfio-gpu interrupts to show up..."
   sleep 30s
-  echo "Moving $1 interrupts to $2 cpu cores $VMID..."
-  grep $1 /proc/interrupts | cut -d ":" -f 1 | while read -r i; do
-        echo $i
-        MASK=$2
-        echo $MASK > /proc/irq/$i/smp_affinity_list
+  MASK="$1"
+  shift
+  for interrupt; do
+    echo "Moving $interrupt interrupts to $MASK cpu cores $VMID..."
+    grep $interrupt /proc/interrupts | cut -d ":" -f 1 | while read -r i; do
+      echo $MASK > /proc/irq/$i/smp_affinity_list
+    done
   done
 }
 
@@ -90,7 +92,7 @@ exec_cmds() {
         ;;
 
       "#assign_interrupts")
-        if_action post-start exec_assign_interrupts "$ARG1" "$ARG2"
+        if_action post-start exec_assign_interrupts "$ARG1" "$ARG2" $REST
         ;;
 
       "#cpu_chrt")
