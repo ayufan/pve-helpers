@@ -12,6 +12,7 @@ Why to do CPU pinning?
 - Usually, it is not needed as long as you don't use SMT
 - If you use SMT, each vCPU is not equal, CPU pinning allows to ensure that VMs receive a real threads
 - For having a good and predictable performance it is not needed to pin to exact cores, Linux can balance it very well
+- In general the less we configure the better it works. These settings are hints to define affinity masks for resources.
 
 ## Installation
 
