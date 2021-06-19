@@ -33,8 +33,15 @@ exec_set_haltpoll() {
 }
 
 exec_assign_interrupts() {
-  echo "Wating 30 seconds for all vfio-gpu interrupts to show up..."
-  sleep 30s
+  local SLEEP="30s"
+  if [[ $1 == --sleep=* ]]; then
+    SLEEP="${1#--sleep=}"
+    shift
+  fi
+
+  echo "Wating $SLEEP seconds for all vfio-gpu interrupts to show up..."
+  sleep "$SLEEP"
+
   MASK="$1"
   shift
   for interrupt; do

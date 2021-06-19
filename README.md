@@ -112,7 +112,7 @@ cat /etc/pve/qemu-server/110.conf
 
 ### 2.4. `assign_interrupts`
 
-`assign_interrupts [cpu cores] [interrupt name] [interrupt name...]`
+`assign_interrupts [--sleep=10s] [cpu cores] [interrupt name] [interrupt name...]`
 
 This setting aims to simplify the process of assigning interrupts to the correct cpu cores in order to get the best performance
 while doing a gpu/usb controller/audio controller passthrough. The goal is to have the same cores assigned to the VM using `cpu_taskset`, 
@@ -121,6 +121,9 @@ This is very important for achieving the lowest possible latency and eliminating
 Ideally, you would also use something like irqbalance to move all other interrupts away from the VM assigned CPU cores and onto your other hypervisor-reserved cores. Same CPU mask can be used with irqbalance to have the VM cpu cores banned from getting any other interrupts.
 
 Note: Isolating cpu cores with `isolcpus` while having its own small benefits, is not required to get these latency improvements.
+
+An optional `--sleep=10s` can be assigned to modify
+default `30s` wait duration.
 
 Usage example:
 ```yaml
