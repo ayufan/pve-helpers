@@ -131,6 +131,8 @@ exec_cmds() {
   done
 }
 
-exec_cmds < "/etc/pve/qemu-server/$1.conf"
+echo "Running exec-cmds for $VMID on $ACTION..."
+
+exec_cmds < "/etc/pve/qemu-server/$VMID.conf"
 
 exit 0
