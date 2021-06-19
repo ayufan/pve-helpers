@@ -161,11 +161,28 @@ sometimes as a sibiling VM without graphics cards passed, but running in a conso
 
 Be careful if you use `pci_unbind` and `pci_rebind`, they should be after the `qm_*` commands.
 
+### 2.6. `pci_unbind` and `pci_rebind`
+
+It might be desirable to bind VGA to VM, but as soon as VM finishes
+unbind that and allow to use on a host.
+
+The simplest is to ensure that VGA can render output on a host before
+starting, then instruct Proxmox VE to unbind, and rebind devices:
+
+```yaml
+cat /etc/pve/qemu-server/204.conf
+
+## Rebind VGA to host
+#pci_unbind 02 00 0
+#pci_unbind 02 00 1
+#pci_rebind
+```
+
 ### 3. Legacy features
 
 These are features that are no really longer needed to achieve a good latency in a VM.
 
-### 3.1. `cpu_chrt` (**not needed anymore**)
+### 3.1. `cpu_chrt` **no longer needed, outdated**
 
 Running virtualized environment always results in quite random latency
 due to amount of other work being done. This is also, because Linux

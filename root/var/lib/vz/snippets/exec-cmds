@@ -79,7 +79,7 @@ exec_qm_depends() {
 }
 
 exec_cmds() {
-  while read CMD ARG1 ARG2 REST; do
+  while read CMD ARG1 ARG2 ARG3 REST; do
     case "$CMD" in
       "#pci_rescan")
         if_action pre-start exec_pci_rescan
@@ -94,7 +94,7 @@ exec_cmds() {
         ;;
 
       "#assign_interrupts")
-        if_action post-start exec_assign_interrupts "$ARG1" "$ARG2" $REST
+        if_action post-start exec_assign_interrupts "$ARG1" "$ARG2" "$ARG3" $REST
         ;;
 
       "#cpu_chrt")
@@ -109,11 +109,15 @@ exec_cmds() {
         if_action post-stop exec_pci_unbind "$ARG1" "$ARG2" "$ARG3"
         ;;
 
+      "#pci_rebind")
+        if_action post-stop exec_pci_rescan
+        ;;
+
       "#qm_conflict")
         if_action pre-start exec_qm_conflict "$ARG1"
         ;;
 
-      "#qm_*"|"#cpu_*"|"#pci_*")
+      "#qm_*"|"#cpu_*"|"#pci_*"|"#set_*"|"#assign_*")
         echo "exec-cmds: command is unknown '$CMD'"
         ;;
     esac
