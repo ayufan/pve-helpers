@@ -112,7 +112,7 @@ cat /etc/pve/qemu-server/110.conf
 
 ### 2.4. `assign_interrupts`
 
-`assign_interrupts [--sleep=10s] [cpu cores] [interrupt name] [interrupt name...]`
+`assign_interrupts [--sleep=10s] [cpu cores] [--all] [interrupt name] [interrupt name...]`
 
 This setting aims to simplify the process of assigning interrupts to the correct cpu cores in order to get the best performance
 while doing a gpu/usb controller/audio controller passthrough. The goal is to have the same cores assigned to the VM using `cpu_taskset`, 
@@ -125,15 +125,14 @@ Note: Isolating cpu cores with `isolcpus` while having its own small benefits, i
 An optional `--sleep=10s` can be assigned to modify
 default `30s` wait duration.
 
+The `--all` can be used to automatically assign interrupts of all configured `hostpci` devices.
+
 Usage example:
 ```yaml
 cat /etc/pve/qemu-server/110.conf
 ##CPU pinning
-#cpu_taskset 4,12,5,13,6,14,7,15,2,10,3,11 
-##Assigning vfio interrupts to VM cores
-#assign_interrupts 4,12,5,13,6,14,7,15,2,10,3,11 vfio
-##Assigning vfio interrupts to VM cores (a specific vfio device) preferred
-#assign_interrupts 4,12,5,13,6,14,7,15,2,10,3,11 0000:01:00
+#cpu_taskset 1-5
+#assign_interrupts --sleep=10s 1-5 --all
 ...
 ```
 
@@ -169,6 +168,8 @@ Be careful if you use `pci_unbind` and `pci_rebind`, they should be after the `q
 It might be desirable to bind VGA to VM, but as soon as VM finishes
 unbind that and allow to use on a host.
 
+The `--all` can be used to unbind all devices.
+
 The simplest is to ensure that VGA can render output on a host before
 starting, then instruct Proxmox VE to unbind, and rebind devices:
 
@@ -178,6 +179,7 @@ cat /etc/pve/qemu-server/204.conf
 ## Rebind VGA to host
 #pci_unbind 02 00 0
 #pci_unbind 02 00 1
+#pci_unbind --all
 #pci_rebind
 ```
 
@@ -346,7 +348,7 @@ My Proxmox VE config looks like this:
 ```text
 ## CPU PIN
 #cpu_taskset 0-5
-#assign_interrupts 0-5 0000:02:00 0000:04:00
+#assign_interrupts 0-5 --all
 #
 ## Conflict (207 shares disks, 208 shares VGA)
 #qm_conflict 207
@@ -387,7 +389,7 @@ I use Windows for Gaming. It has dedicated RTX 2080 Super.
 ```text
 ## CPU PIN
 #cpu_taskset 6-11
-#assign_interrupts 6-11 0000:01:00
+#assign_interrupts 6-11 --all
 agent: 1
 args: -audiodev id=alsa,driver=alsa,out.period-length=100000,out.frequency=48000,out.channels=2,out.try-poll=off,out.dev=swapped -soundhw hda
 balloon: 0

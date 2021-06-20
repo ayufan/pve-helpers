@@ -22,6 +22,10 @@ sleep_once() {
   fi
 }
 
+hostpci_ids() {
+  grep '^hostpci[0-9]:.*0000' "/etc/pve/qemu-server/$VMID.conf" | awk '{print $2}' | awk -F, '{print $1}'
+}
+
 exec_pci_rescan() {
   echo "Running PCI rescan for $VMID..."
   echo 1 > /sys/bus/pci/rescan
@@ -44,19 +48,39 @@ exec_assign_interrupts() {
 
   MASK="$1"
   shift
+
+  if [[ "$1" == "--all" ]]; then
+    set -- $(hostpci_ids)
+  fi
+
   for interrupt; do
     interrupt=$(printf '%b' "${interrupt//%/\\x}")
     echo "Moving $interrupt interrupts to $MASK cpu cores $VMID..."
-    grep $interrupt /proc/interrupts | cut -d ":" -f 1 | while read -r i; do
+    grep "$interrupt" /proc/interrupts | cut -d ":" -f 1 | while read -r i; do
       echo "- IRQ: $(grep "^\s*$i:" /proc/interrupts)"
-      echo $MASK > /proc/irq/$i/smp_affinity_list
+      echo "$MASK" > /proc/irq/$i/smp_affinity_list
     done
   done
 }
 
 exec_pci_unbind() {
-  echo "Running PCI unbind of '$1:$2.$3' for $VMID..."
-  echo 1 > "/sys/bus/pci/devices/0000:$1:$2.$3/remove"
+  if [[ "$1" == "--all" ]]; then
+    set -- $(hostpci_ids)
+  else
+    set -- "0000:$1:$2.$3"
+  fi
+
+  for devid; do
+    if [[ -e "/sys/bus/pci/devices/$devid" ]]; then
+      echo "Running PCI unbind of '$devid' for $VMID..."
+      echo 1 > "/sys/bus/pci/devices/$devid/remove"
+    elif [[ -e "/sys/bus/pci/devices/$devid.0" ]]; then
+      echo "Running PCI unbind of '$devid.0' for $VMID..."
+      echo 1 > "/sys/bus/pci/devices/$devid.0/remove"
+    else
+      echo "The '$devid' not found in '/sys/bus/pci/devices'"
+    fi
+  done
 }
 
 exec_cpu_taskset() {
@@ -114,6 +138,10 @@ exec_cmds() {
 
       "#pci_unbind")
         if_action post-stop exec_pci_unbind "$ARG1" "$ARG2" "$ARG3"
+        ;;
+
+      "#pci_unbind_all")
+        if_action post-stop exec_pci_unbind_all
         ;;
 
       "#pci_rebind")
