@@ -50,13 +50,28 @@ Edit VM description and add a new line if one or both these two commands.
 
 ### 2.1. `cpu_taskset`
 
-Check the `isolcpus`, but in general for the best performance
-you want to assign VM to physical cores, not a mix of physical
-and virtual cores.
+For the best performance you want to assign VM to physical cores,
+not a mix of physical and virtual cores.
 
 For example for `i7-8700` each core has two threads: 0-6, 1-7, 2-8.
 You can easily check that with `lscpu -e`, checking which cores are
 assigned twice.
+
+```bash
+CPU NODE SOCKET CORE L1d:L1i:L2:L3 ONLINE MAXMHZ    MINMHZ
+0   0    0      0    0:0:0:0       yes    4600.0000 800.0000
+1   0    0      1    1:1:1:0       yes    4600.0000 800.0000
+2   0    0      2    2:2:2:0       yes    4600.0000 800.0000
+3   0    0      3    3:3:3:0       yes    4600.0000 800.0000
+4   0    0      4    4:4:4:0       yes    4600.0000 800.0000
+5   0    0      5    5:5:5:0       yes    4600.0000 800.0000
+6   0    0      0    0:0:0:0       yes    4600.0000 800.0000
+7   0    0      1    1:1:1:0       yes    4600.0000 800.0000
+8   0    0      2    2:2:2:0       yes    4600.0000 800.0000
+9   0    0      3    3:3:3:0       yes    4600.0000 800.0000
+10  0    0      4    4:4:4:0       yes    4600.0000 800.0000
+11  0    0      5    5:5:5:0       yes    4600.0000 800.0000
+```
 
 For example it is advised to assign a one CPU less than a number of
 physical cores. For the `i7-8700` it will be 5 cores.
@@ -246,48 +261,6 @@ The comment defines a commands to execute to unbind and rebind graphics card VM.
 
 In cases where there are bugs in getting VM up, the `suspend/resume` cycle of Proxmox
 helps: `systemctl suspend`.
-
-#### 3.3. Using `isolcpus`
-
-The option of `#cpu_taskset` can be used with conjuction to `isolcpus` of kernel.
-This is a way to disable CPU cores from being used by hypervisor,
-making it possible to assign cores exclusively to the VMs only.
-
-For doing that edit `/etc/default/grub` and add:
-
-```bash
-GRUB_CMDLINE_LINUX="$GRUB_CMDLINE_LINUX isolcpus=1-5,7-11"
-GRUB_CMDLINE_LINUX="$GRUB_CMDLINE_LINUX nohz_full=1-5,7-11"
-GRUB_CMDLINE_LINUX="$GRUB_CMDLINE_LINUX rcu_nocbs=1-5,7-11"
-```
-
-Where `1-5,7-11` matches a cores that Proxmox VE should not use.
-You really want to omit everything that is on CORE0.
-The above specification is valid for latest `i7-8700` CPUs:
-
-```bash
-CPU NODE SOCKET CORE L1d:L1i:L2:L3 ONLINE MAXMHZ    MINMHZ
-0   0    0      0    0:0:0:0       yes    4600.0000 800.0000
-1   0    0      1    1:1:1:0       yes    4600.0000 800.0000
-2   0    0      2    2:2:2:0       yes    4600.0000 800.0000
-3   0    0      3    3:3:3:0       yes    4600.0000 800.0000
-4   0    0      4    4:4:4:0       yes    4600.0000 800.0000
-5   0    0      5    5:5:5:0       yes    4600.0000 800.0000
-6   0    0      0    0:0:0:0       yes    4600.0000 800.0000
-7   0    0      1    1:1:1:0       yes    4600.0000 800.0000
-8   0    0      2    2:2:2:0       yes    4600.0000 800.0000
-9   0    0      3    3:3:3:0       yes    4600.0000 800.0000
-10  0    0      4    4:4:4:0       yes    4600.0000 800.0000
-11  0    0      5    5:5:5:0       yes    4600.0000 800.0000
-```
-
-For Ryzen CPUs you will rather see CORE0 to be assigned
-to CPU0 and CPU1, thus your specification will look `2-11`.
-Note: Newer Ryzen CPUs/MBs follow Intel's connotation. It's best to use `lscpu -p` to check your own cpu topology.
-
-After editing configuration `update-grub` and reboot Proxmox VE.
-
-> Note: I have amazing performance without using `isolcpus`.
 
 ### 4. Suspend/resume
 
