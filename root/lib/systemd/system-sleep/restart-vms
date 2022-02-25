@@ -1,9 +1,9 @@
 #!/bin/bash
 
 if [[ "$1" == "pre" ]]; then
-  /usr/bin/pvesh --nooutput create /nodes/localhost/stopall
+  /bin/systemctl stop pve-guests.service
 elif [[ "$1" == "post" ]]; then
-  /usr/bin/pvesh --nooutput create /nodes/localhost/startall
+  /bin/systemctl start pve-guests.service
 else
   echo "invalid: $@"
   exit 1
