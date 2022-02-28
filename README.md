@@ -28,7 +28,10 @@ sudo gem install fpm
 # compile pve-helpers
 git clone https://github.com/ayufan/pve-helpers
 cd pve-helpers
+# install to the default `local` storage (/var/lib/vz)
 sudo make install
+# ..or install to another storage location
+sudo make install STORAGE_PATH=/var/lib/pve/local-btrfs
 ```
 
 ## Usage
