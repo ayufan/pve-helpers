@@ -112,6 +112,10 @@ exec_qm_depends() {
 exec_cmds() {
   while read CMD ARG1 ARG2 ARG3 REST; do
     case "$CMD" in
+      "#pci_remove")
+        if_action pre-start exec_pci_unbind "$ARG1" "$ARG2" "$ARG3"
+        ;;
+
       "#pci_rescan")
         if_action pre-start exec_pci_rescan
         ;;

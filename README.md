@@ -102,7 +102,7 @@ cpu_taskset 7-11
 
 ### 2.2. use `vendor-reset` for fixing AMD Radeon reset bug
 
-Instead of `pci_unbind` and `pci_rescan` install DKMS module from https://github.com/gnif/vendor-reset:
+Install DKMS module from https://github.com/gnif/vendor-reset:
 
 ```bash
 apt install dkms
@@ -201,6 +201,20 @@ cat /etc/pve/qemu-server/204.conf
 #pci_rebind
 ```
 
+### 2.7. `pci_remove` and `pci_rescan`
+
+In the reverse of 2.6, sometimes host will actually hold some memory in PCI device's address space, and prevent that space being handled by vfio-pci driver. One common example is `simplefb` allocating `BOOTFB` in [boot GPU's address space](https://github.com/torvalds/linux/blob/7e57714cd0ad2d5bb90e50b5096a0e671dec1ef3/drivers/firmware/sysfb_simplefb.c#L115) despite setting `video=simplefb:off` in kernel cmdline. A [hack](https://github.com/furkanmustafa/forcefully-remove-bootfb) exists but it is [not guranteed to work for everyone](https://github.com/SRH1605/forcefully-remove-bootfb/pull/1#issuecomment-1054073276). As such one can unbind and rebind the PCI device to free up the entire address space allocated for the device, indirectly getting rid of the offending memory allocation.
+
+The difference between this set of commands and `pci_unbind`/`pci_rebind` is that this set runs before VM is started (need to have all the memory availabe before passthrough), while `pci_unbind`/`pci_rebind` happens after VM is stopped (so we know VGA is no longer in use and can be given back to the host).
+
+```yaml
+cat /etc/pve/qemu-server/204.conf
+
+## Unbind problematic VGA from host
+#pci_remove 0d 00 0
+#pci_rescan
+```
+
 ### 3. Legacy features
 
 These are features that are no really longer needed to achieve a good latency in a VM.
@@ -226,7 +240,7 @@ cpu_chrt fifo 1
 > It seems that if Hyper-V entitlements (they are enabled for `ostype: win10`) are enabled this is no longer needed.
 > I now have amazing performance without using `cpu_chrt`.
 
-### 3.2. `pci_unbind` and `pci_rescan` **no longer needed, outdated**
+### 3.2. `pci_unbind` and `pci_rescan` for fixing AMD Radeon reset bug **no longer needed, outdated**
 
 Just use `vendor-reset`.
 
