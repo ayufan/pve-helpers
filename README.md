@@ -203,7 +203,7 @@ cat /etc/pve/qemu-server/204.conf
 
 ### 2.7. `pci_remove` and `pci_rescan`
 
-In the reverse of 2.6, sometimes host will actually hold some memory in PCI device's address space, and prevent that space being handled by vfio-pci driver. One common example is `simplefb` allocating `BOOTFB` in [boot GPU's address space](https://github.com/torvalds/linux/blob/7e57714cd0ad2d5bb90e50b5096a0e671dec1ef3/drivers/firmware/sysfb_simplefb.c#L115) despite setting `video=simplefb:off` in kernel cmdline. A [hack](https://github.com/furkanmustafa/forcefully-remove-bootfb) exists but it is [not guranteed to work for everyone](https://github.com/SRH1605/forcefully-remove-bootfb/pull/1#issuecomment-1054073276). As such one can unbind and rebind the PCI device to free up the entire address space allocated for the device, indirectly getting rid of the offending memory allocation.
+In a reverse scenario of 2.6, sometimes host will actually hold some memory in PCI device's address space, and prevent that space being handled by vfio-pci driver and thus the VM. One common example is `simplefb` allocating `BOOTFB` in [boot GPU's address space](https://github.com/torvalds/linux/blob/7e57714cd0ad2d5bb90e50b5096a0e671dec1ef3/drivers/firmware/sysfb_simplefb.c#L115) despite setting `video=simplefb:off` in kernel cmdline. A [hack](https://github.com/furkanmustafa/forcefully-remove-bootfb) exists but it is [not guranteed to work for everyone](https://github.com/SRH1605/forcefully-remove-bootfb/pull/1#issuecomment-1054073276). As such one can unbind and rebind the PCI device to free up the entire address space allocated for the device, indirectly getting rid of the offending memory allocation. However, this won't work on all memory allocation. For memory occupied by `efifb`/`simplefb`, please see below.
 
 The difference between this set of commands and `pci_unbind`/`pci_rebind` is that this set runs before VM is started (need to have all the memory availabe before passthrough), while `pci_unbind`/`pci_rebind` happens after VM is stopped (so we know VGA is no longer in use and can be given back to the host).
 
@@ -213,6 +213,17 @@ cat /etc/pve/qemu-server/204.conf
 ## Unbind problematic VGA from host
 #pci_remove 0d 00 0
 #pci_rescan
+```
+
+### 2.8. `fboff`
+
+In addition to the `BOOTFB` issue, many users need to specify `video=efifb:off` or equivalent kernel parameter. However, [not everyone can use that](https://www.reddit.com/r/VFIO/comments/ks7ve3/alternative_to_efifboff/) in their workflow. As such, `fboff` can be used as an alternative to kernel parameter.
+
+```yaml
+cat /etc/pve/qemu-server/204.conf
+
+## free memory used by simple-framebuffer.0
+#fboff simple-framebuffer.0
 ```
 
 ### 3. Legacy features

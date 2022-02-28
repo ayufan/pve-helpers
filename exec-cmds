@@ -109,9 +109,18 @@ exec_qm_depends() {
   qm start "$1"
 }
 
+exec_fboff() {
+  echo "Disabling $1 to prepare to pass GPU to VM$VMID"
+  echo "$1" > /sys/bus/platform/devices/$1/driver/unbind
+}
+
 exec_cmds() {
   while read CMD ARG1 ARG2 ARG3 REST; do
     case "$CMD" in
+      "#fboff")
+        if_action pre-start exec_fboff "$ARG1"
+        ;;
+
       "#pci_remove")
         if_action pre-start exec_pci_unbind "$ARG1" "$ARG2" "$ARG3"
         ;;
