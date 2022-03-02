@@ -96,6 +96,7 @@ cpu_taskset 1-5
 VM 2:
 cpu_taskset 7-11
 ```
+See Note 3.1 if using `isolcpus`
 
 ### 2.2. use `vendor-reset` for fixing AMD Radeon reset bug
 
@@ -202,7 +203,7 @@ cat /etc/pve/qemu-server/204.conf
 
 These are features that are no really longer needed to achieve a good latency in a VM.
 
-### 3.1. `cpu_chrt` **no longer needed, outdated**
+### 3.1. `cpu_chrt` **no longer needed, outdated, unless using isolcpus to reserve cores**
 
 Running virtualized environment always results in quite random latency
 due to amount of other work being done. This is also, because Linux
@@ -222,6 +223,9 @@ cpu_chrt fifo 1
 > Note:
 > It seems that if Hyper-V entitlements (they are enabled for `ostype: win10`) are enabled this is no longer needed.
 > I now have amazing performance without using `cpu_chrt`.
+
+> If you have reserved cores using grub options i.e. isolcpus=6,7,14,15 Then not having this set will make all processes only run on the first core you ask.
+> i.e if you taskset to core 6,7,14,15 all tasks will only run on core 6, even though it is set correctly, see https://serverfault.com/questions/573025/taskset-not-working-over-a-range-of-cores-in-isolcpus
 
 ### 3.2. `pci_unbind` and `pci_rescan` **no longer needed, outdated**
 
