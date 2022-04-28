@@ -226,6 +226,10 @@ cat /etc/pve/qemu-server/204.conf
 #fboff simple-framebuffer.0
 ```
 
+### 2.9 `virtiofsd`
+
+Please read https://the-b.org/proxmox/ for more info.
+
 ### 3. Legacy features
 
 These are features that are no really longer needed to achieve a good latency in a VM.
