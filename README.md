@@ -228,6 +228,25 @@ cat /etc/pve/qemu-server/204.conf
 
 ### 2.9 `virtiofsd`
 
+```yaml
+cat /etc/pve/qemu-server/101.conf
+
+#virtiofsd /media
+
+args: -chardev socket,id=char0,path=/run/qemu-server/101-media.virtiofsd -device vhost-user-fs-pci,queue-size=1024,chardev=char0,tag=/media -object memory-backend-file,id=mem,size=4G,mem-path=/dev/shm,share=on -numa node,memdev=mem
+
+## path=/run/qemu-server/101-media.virtiofsd -- '101' should be changed to match the VMID and 'media' should be changed to match the shared directory name without slashes.
+## size=4G -- should be changed to be equal to the VM's RAM size
+## tag=/media  -- this is used by the VM to mount the correct virtiofs share
+```
+
+In your guest, mount with following command:
+
+```
+mkdir /mnt/tmp
+mount -t virtiofs /media /mnt/tmp # `/media` is the tag we defined above
+```
+
 Please read https://the-b.org/proxmox/ for more info.
 
 ### 3. Legacy features
