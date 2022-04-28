@@ -114,6 +114,11 @@ exec_fboff() {
   echo "$1" > /sys/bus/platform/devices/$1/driver/unbind
 }
 
+exec_virtiofsd() {
+  echo "Needs virtiofsd for directory $1"
+  /usr/lib/kvm/virtiofsd --socket-path=/run/qemu-server/$VMID-${1/\//}.virtiofsd -o source=$1 -o cache=always --daemonize > /dev/null 2>&1 &
+}
+
 exec_cmds() {
   while read CMD ARG1 ARG2 ARG3 REST; do
     case "$CMD" in
@@ -163,6 +168,10 @@ exec_cmds() {
 
       "#qm_conflict")
         if_action pre-start exec_qm_conflict "$ARG1"
+        ;;
+
+      "#virtiofsd")
+        if_action pre-start exec_virtiofsd "$ARG1"
         ;;
 
       "#qm_*"|"#cpu_*"|"#pci_*"|"#set_*"|"#assign_*")
