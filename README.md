@@ -247,6 +247,11 @@ mkdir /mnt/tmp
 mount -t virtiofs /media/storage /mnt/tmp # `/media/storage` is the tag we defined above
 ```
 
+Finally, add it to fstab:
+
+```
+/media/storage  /mnt/tmp  virtiofs defaults       0       0
+```
 Please read https://the-b.org/proxmox/ for more info.
 
 ### 3. Legacy features
