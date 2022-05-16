@@ -5,13 +5,17 @@ export RELEASE_VERSION ?= $(RELEASE_NAME)-g$(shell git rev-parse --short HEAD)
 
 PACKAGE_FILE ?= pve-helpers-$(RELEASE_VERSION)_all.deb
 TARGET_HOST ?= fill-me.home
+STORAGE_PATH ?= /var/lib/vz
+SNIPPET_PATH ?= ./root/$(STORAGE_PATH)/snippets
 
 all: pve-helpers
 
-.PHONY: pve-helpers
-pve-helpers: $(PACKAGE_FILE)
+.PHONY: copy-to-storage
+copy-to-storage:
+	mkdir -p $(SNIPPET_PATH)
+	cp exec-cmds $(SNIPPET_PATH)
 
-$(PACKAGE_FILE):
+$(PACKAGE_FILE): copy-to-storage
 	fpm \
 		--input-type dir \
 		--output-type deb \
@@ -32,6 +36,11 @@ $(PACKAGE_FILE):
 		--depends util-linux \
 		--deb-compression gz \
 		root/=/
+
+.PHONY: pve-helpers
+pve-helpers: $(PACKAGE_FILE)
+	rm $(SNIPPET_PATH)/exec-cmds
+	find ./root/ -type d -empty -delete
 
 install: pve-helpers
 	dpkg -i $(PACKAGE_FILE)

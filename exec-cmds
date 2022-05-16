@@ -109,9 +109,27 @@ exec_qm_depends() {
   qm start "$1"
 }
 
+exec_fboff() {
+  echo "Disabling $1 to prepare to pass GPU to VM$VMID"
+  echo "$1" > /sys/bus/platform/devices/$1/driver/unbind
+}
+
+exec_virtiofsd() {
+  echo "Needs virtiofsd for directory $1"
+  /usr/lib/kvm/virtiofsd --socket-path=/run/qemu-server/$VMID-$(systemd-escape -p "$1").virtiofsd -o source=$1 -o cache=always --daemonize > /dev/null 2>&1 &
+}
+
 exec_cmds() {
   while read CMD ARG1 ARG2 ARG3 REST; do
     case "$CMD" in
+      "#fboff")
+        if_action pre-start exec_fboff "$ARG1"
+        ;;
+
+      "#pci_remove")
+        if_action pre-start exec_pci_unbind "$ARG1" "$ARG2" "$ARG3"
+        ;;
+
       "#pci_rescan")
         if_action pre-start exec_pci_rescan
         ;;
@@ -150,6 +168,10 @@ exec_cmds() {
 
       "#qm_conflict")
         if_action pre-start exec_qm_conflict "$ARG1"
+        ;;
+
+      "#virtiofsd")
+        if_action pre-start exec_virtiofsd "$ARG1"
         ;;
 
       "#qm_*"|"#cpu_*"|"#pci_*"|"#set_*"|"#assign_*")

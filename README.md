@@ -28,7 +28,10 @@ sudo gem install fpm
 # compile pve-helpers
 git clone https://github.com/ayufan/pve-helpers
 cd pve-helpers
+# install to the default `local` storage (/var/lib/vz)
 sudo make install
+# ..or install to another storage location
+sudo make install STORAGE_PATH=/var/lib/pve/local-btrfs
 ```
 
 ## Usage
@@ -99,7 +102,7 @@ cpu_taskset 7-11
 
 ### 2.2. use `vendor-reset` for fixing AMD Radeon reset bug
 
-Instead of `pci_unbind` and `pci_rescan` install DKMS module from https://github.com/gnif/vendor-reset:
+Install DKMS module from https://github.com/gnif/vendor-reset:
 
 ```bash
 apt install dkms
@@ -198,6 +201,59 @@ cat /etc/pve/qemu-server/204.conf
 #pci_rebind
 ```
 
+### 2.7. `pci_remove` and `pci_rescan`
+
+In a reverse scenario of 2.6, sometimes host will actually hold some memory in PCI device's address space, and prevent that space being handled by vfio-pci driver and thus the VM. One common example is `simplefb` allocating `BOOTFB` in [boot GPU's address space](https://github.com/torvalds/linux/blob/7e57714cd0ad2d5bb90e50b5096a0e671dec1ef3/drivers/firmware/sysfb_simplefb.c#L115) despite setting `video=simplefb:off` in kernel cmdline. A [hack](https://github.com/furkanmustafa/forcefully-remove-bootfb) exists but it is [not guranteed to work for everyone](https://github.com/SRH1605/forcefully-remove-bootfb/pull/1#issuecomment-1054073276). As such one can unbind and rebind the PCI device to free up the entire address space allocated for the device, indirectly getting rid of the offending memory allocation. However, this won't work on all memory allocation. For memory occupied by `efifb`/`simplefb`, please see below.
+
+The difference between this set of commands and `pci_unbind`/`pci_rebind` is that this set runs before VM is started (need to have all the memory availabe before passthrough), while `pci_unbind`/`pci_rebind` happens after VM is stopped (so we know VGA is no longer in use and can be given back to the host).
+
+```yaml
+cat /etc/pve/qemu-server/204.conf
+
+## Unbind problematic VGA from host
+#pci_remove 0d 00 0
+#pci_rescan
+```
+
+### 2.8. `fboff`
+
+In addition to the `BOOTFB` issue, many users need to specify `video=efifb:off` or equivalent kernel parameter. However, [not everyone can use that](https://www.reddit.com/r/VFIO/comments/ks7ve3/alternative_to_efifboff/) in their workflow. As such, `fboff` can be used as an alternative to kernel parameter.
+
+```yaml
+cat /etc/pve/qemu-server/204.conf
+
+## free memory used by simple-framebuffer.0
+#fboff simple-framebuffer.0
+```
+
+### 2.9 `virtiofsd`
+
+```yaml
+cat /etc/pve/qemu-server/101.conf
+
+#virtiofsd /media/storage
+
+args: -chardev socket,id=char0,path=/run/qemu-server/101-media-storage.virtiofsd -device vhost-user-fs-pci,queue-size=1024,chardev=char0,tag=/media -object memory-backend-file,id=mem,size=4G,mem-path=/dev/shm,share=on -numa node,memdev=mem
+
+## path=/run/qemu-server/101-media-storage.virtiofsd -- '101' should be changed to match the VMID and '/media/storage' will be escaped by $(systemd-escape -p "/media/storage") to get 'media-storage'
+## size=4G -- should be changed to be equal to the VM's RAM size
+## tag=/media/storage  -- this is used by the VM to mount the correct virtiofs share
+```
+
+In your guest, mount with following command:
+
+```
+mkdir /mnt/tmp
+mount -t virtiofs /media/storage /mnt/tmp # `/media/storage` is the tag we defined above
+```
+
+Finally, add it to fstab:
+
+```
+/media/storage  /mnt/tmp  virtiofs defaults       0       0
+```
+Please read https://the-b.org/proxmox/ for more info.
+
 ### 3. Legacy features
 
 These are features that are no really longer needed to achieve a good latency in a VM.
@@ -223,7 +279,7 @@ cpu_chrt fifo 1
 > It seems that if Hyper-V entitlements (they are enabled for `ostype: win10`) are enabled this is no longer needed.
 > I now have amazing performance without using `cpu_chrt`.
 
-### 3.2. `pci_unbind` and `pci_rescan` **no longer needed, outdated**
+### 3.2. `pci_unbind` and `pci_rescan` for fixing AMD Radeon reset bug **no longer needed, outdated**
 
 Just use `vendor-reset`.
 
