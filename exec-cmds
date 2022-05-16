@@ -116,7 +116,7 @@ exec_fboff() {
 
 exec_virtiofsd() {
   echo "Needs virtiofsd for directory $1"
-  /usr/lib/kvm/virtiofsd --socket-path=/run/qemu-server/$VMID-${1/\//}.virtiofsd -o source=$1 -o cache=always --daemonize > /dev/null 2>&1 &
+  /usr/lib/kvm/virtiofsd --socket-path=/run/qemu-server/$VMID-$(systemd-escape -p "$1").virtiofsd -o source=$1 -o cache=always --daemonize > /dev/null 2>&1 &
 }
 
 exec_cmds() {
