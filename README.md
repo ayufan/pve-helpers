@@ -231,20 +231,20 @@ cat /etc/pve/qemu-server/204.conf
 ```yaml
 cat /etc/pve/qemu-server/101.conf
 
-#virtiofsd /media
+#virtiofsd /media/storage
 
-args: -chardev socket,id=char0,path=/run/qemu-server/101-media.virtiofsd -device vhost-user-fs-pci,queue-size=1024,chardev=char0,tag=/media -object memory-backend-file,id=mem,size=4G,mem-path=/dev/shm,share=on -numa node,memdev=mem
+args: -chardev socket,id=char0,path=/run/qemu-server/101-media-storage.virtiofsd -device vhost-user-fs-pci,queue-size=1024,chardev=char0,tag=/media -object memory-backend-file,id=mem,size=4G,mem-path=/dev/shm,share=on -numa node,memdev=mem
 
-## path=/run/qemu-server/101-media.virtiofsd -- '101' should be changed to match the VMID and 'media' should be changed to match the shared directory name without slashes.
+## path=/run/qemu-server/101-media-storage.virtiofsd -- '101' should be changed to match the VMID and '/media/storage' will be escaped by $(systemd-escape -p "/media/storage") to get 'media-storage'
 ## size=4G -- should be changed to be equal to the VM's RAM size
-## tag=/media  -- this is used by the VM to mount the correct virtiofs share
+## tag=/media/storage  -- this is used by the VM to mount the correct virtiofs share
 ```
 
 In your guest, mount with following command:
 
 ```
 mkdir /mnt/tmp
-mount -t virtiofs /media /mnt/tmp # `/media` is the tag we defined above
+mount -t virtiofs /media/storage /mnt/tmp # `/media/storage` is the tag we defined above
 ```
 
 Please read https://the-b.org/proxmox/ for more info.
